@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import uuid
 from typing import Dict, List, Any
 
 ecs_client = boto3.client('ecs') 
@@ -28,6 +29,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     try:
         print(f"Received event: {json.dumps(event)}")
+
+        # Generate Guid from each run 
+        test_run_id = uuid.uuid4()
         
         # Extract parameters from event
         task_count = event.get('taskCount', 1)        
@@ -43,7 +47,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         event.get('targetUrl', ''),
                         event.get('vus', 100),
                         event.get('rate', 10),
-                        event.get('duration', 300)
+                        event.get('duration', 300),
+                        event.get('testRunId', str(test_run_id))
                         ]
                 }
                 ]
@@ -74,11 +79,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         failures = response.get('failures', [])
         
         # Build response
-        task_arns = [task['taskArn'] for task in tasks]
+        task_arns = [task['taskArn'] for task in tasks]        
         
         result = {
             'statusCode': 200 if tasks else 500,
             'body': {
+                'testRunId' : str(test_run_id),
                 'message': f'Successfully launched {len(tasks)} task(s)',
                 'tasksLaunched': len(tasks),
                 'taskArns': task_arns,
